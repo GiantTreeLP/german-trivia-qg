@@ -7,7 +7,7 @@
   "e2e": false,
   "fp16": true,
   "source_prefix": "",
-  "output_dir": "output/models/t5-base-e2e-pretrained-qg",
+  "output_dir": "output/models/german-trivia-qg-t5-e2e",
   "overwrite_output_dir": false,
   "save_strategy": "steps",
   "do_train": true,
