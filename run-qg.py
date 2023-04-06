@@ -481,7 +481,7 @@ def main():
                 inputs.append(samples["context"][i])
                 targets.append(" <sep> ".join(samples["questions"][i]))
 
-        inputs = [prefix + inp for inp in inputs]
+        inputs = [prefix + _input for _input in inputs]
         model_inputs = tokenizer(
             inputs,
             max_length=data_args.max_source_length,
@@ -489,7 +489,7 @@ def main():
             truncation=True,
         )
 
-        # Setup the tokenizer for targets
+        # Set up the tokenizer for targets
         with tokenizer.as_target_tokenizer():
             labels = tokenizer(
                 targets, max_length=max_target_length, padding=padding, truncation=True
@@ -498,9 +498,12 @@ def main():
         # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
         # padding in the loss.
         if padding == "max_length" and data_args.ignore_pad_token_for_loss:
+            pad_token_id = tokenizer.pad_token_id
+
             labels["input_ids"] = [
-                [(l if l != tokenizer.pad_token_id else -100) for l in label]
-                for label in labels["input_ids"]
+                [
+                    (token_id if token_id != pad_token_id else -100) for token_id in label
+                ] for label in labels["input_ids"]
             ]
 
         model_inputs["labels"] = labels["input_ids"]
@@ -579,26 +582,26 @@ def main():
     # Metric
     metric = evaluate.load("sacrebleu")
 
-    def postprocess_text(preds, labels):
-        preds = [pred.strip() for pred in preds]
+    def postprocess_text(_predictions, labels):
+        _predictions = [pred.strip() for pred in _predictions]
         labels = [[label.strip()] for label in labels]
 
-        return preds, labels
+        return _predictions, labels
 
-    def compute_metrics(eval_preds):
-        preds, labels = eval_preds
-        if isinstance(preds, tuple):
-            preds = preds[0]
-        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+    def compute_metrics(eval_predictions):
+        _predictions, labels = eval_predictions
+        if isinstance(_predictions, tuple):
+            _predictions = _predictions[0]
+        decoded_predictions = tokenizer.batch_decode(_predictions, skip_special_tokens=True)
         if data_args.ignore_pad_token_for_loss:
             # Replace -100 in the labels as we can't decode them.
             labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
         # Some simple post-processing
-        decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+        decoded_predictions, decoded_labels = postprocess_text(decoded_predictions, decoded_labels)
 
-        result = metric.compute(predictions=decoded_preds, references=decoded_labels)
+        result = metric.compute(predictions=decoded_predictions, references=decoded_labels)
         result = {"bleu": result["score"]}
 
         prediction_lens = [
@@ -735,7 +738,7 @@ def main():
             kwargs["dataset"] = data_args.dataset_name
 
     languages = [
-        l for l in [data_args.source_lang, data_args.target_lang] if l is not None
+        language for language in [data_args.source_lang, data_args.target_lang] if language is not None
     ]
     if len(languages) > 0:
         kwargs["language"] = languages
