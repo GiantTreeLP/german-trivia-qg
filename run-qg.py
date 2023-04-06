@@ -344,7 +344,7 @@ def main():
         raw_datasets = load_dataset(
             data_args.dataset_name,
             data_args.dataset_config_name,
-            field=data_args.dataset_field_name,
+            # field=data_args.dataset_field_name,
             cache_dir=model_args.cache_dir,
         )
     else:
@@ -457,29 +457,27 @@ def main():
         )
 
     def preprocess_function(samples):
-        def construct_input(samples, i):
-            answer, context = samples["answers"][i], samples["context"][i]
-            if isinstance(answer, list):
-                answer = answer[0]
-            if isinstance(answer["text"], str):
-                answer_text = answer["text"].strip()
-            else:
-                answer_text = answer["text"][0].strip()
-
-            hl_answer = f"<hl>{answer_text}<hl>"
-            return context.replace(answer_text, hl_answer)
 
         inputs = []
         targets = []
 
         if not data_args.e2e:
+            context_map: dict[str, list[str]] = {}
+
             for i in range(len(samples["id"])):
-                inputs.append(construct_input(samples, i))
-                targets.append(samples["question"][i])
+                question_list = context_map.get(samples["context"][i], [])
+                question_list.append(samples["question"][i])
+                context_map[samples["context"][i]] = question_list
+
+            inputs = []
+            targets = []
+
+            for k, v in context_map.items():
+                inputs.append(k)
+                targets.append(" <sep> ".join(v))
         else:
-            for i in range(len(samples["context"])):
-                inputs.append(samples["context"][i])
-                targets.append(" <sep> ".join(samples["questions"][i]))
+            inputs = samples["context"]
+            targets = samples["question"]
 
         inputs = [prefix + _input for _input in inputs]
         model_inputs = tokenizer(
@@ -605,7 +603,7 @@ def main():
         result = {"bleu": result["score"]}
 
         prediction_lens = [
-            np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds
+            np.count_nonzero(pred != tokenizer.pad_token_id) for pred in _predictions
         ]
         result["gen_len"] = np.mean(prediction_lens)
         result = {k: round(v, 4) for k, v in result.items()}
