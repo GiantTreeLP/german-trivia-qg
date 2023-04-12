@@ -24,11 +24,9 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
-import datasets
 import evaluate
 import numpy as np
 import transformers
-from datasets import load_dataset
 from transformers import (
     AutoConfig,
     AutoModelForSeq2SeqLM,
@@ -46,6 +44,9 @@ from transformers import (
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
+
+import datasets
+from datasets import load_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -372,7 +373,7 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    tokenizer.add_tokens(["<hl>"])
+
     model = AutoModelForSeq2SeqLM.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
