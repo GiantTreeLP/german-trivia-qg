@@ -224,6 +224,23 @@ class DataTrainingArguments:
                     "which is used during ``evaluate`` and ``predict``."
         },
     )
+    repetition_penalty: float = field(
+        default=1.0,
+        metadata={
+            "help": "The parameter for repetition penalty. 1.0 means no penalty. See "
+                    "https://arxiv.org/abs/1909.05858 for more details."
+        },
+    )
+    length_penalty: float = field(
+        default=1.0,
+        metadata={
+            "help": "Exponential penalty to the length that is used with beam-based generation. "
+                    "It is applied as an exponent to the sequence length, "
+                    "which in turn is used to divide the score of the sequence. "
+                    "Since the score is the log likelihood of the sequence (i.e. negative), length_penalty > 0.0 "
+                    "promotes longer sequences, while length_penalty < 0.0 encourages shorter sequences."
+        },
+    )
     ignore_pad_token_for_loss: bool = field(
         default=True,
         metadata={
@@ -363,6 +380,10 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        num_beams=data_args.num_beams,
+        max_length=data_args.max_target_length,
+        repetition_penalty=data_args.repetition_penalty,
+        length_penalty=data_args.length_penalty,
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name
@@ -458,9 +479,6 @@ def main():
         )
 
     def preprocess_function(samples):
-
-        inputs = []
-        targets = []
 
         if not data_args.e2e:
             context_map: dict[str, list[str]] = {}
