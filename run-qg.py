@@ -678,9 +678,7 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        metrics = trainer.evaluate(
-            max_length=max_length, num_beams=num_beams, metric_key_prefix="eval"
-        )
+        metrics = trainer.evaluate(metric_key_prefix="eval")
         max_eval_samples = (
             data_args.max_eval_samples
             if data_args.max_eval_samples is not None
@@ -696,9 +694,7 @@ def main():
 
         predict_results = trainer.predict(
             predict_dataset,
-            metric_key_prefix="predict",
-            max_length=max_length,
-            num_beams=num_beams,
+            metric_key_prefix="predict"
         )
         predictions = [
             tokenizer.decode(ids, skip_special_tokens=True)
