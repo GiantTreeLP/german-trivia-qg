@@ -457,24 +457,13 @@ def main():
         )
 
     def preprocess_function(samples):
-
         inputs = []
         targets = []
 
         if not data_args.e2e:
-            context_map: dict[str, list[str]] = {}
-
             for i in range(len(samples["id"])):
-                question_list = context_map.get(samples["context"][i], [])
-                question_list.append(samples["question"][i])
-                context_map[samples["context"][i]] = question_list
-
-            inputs = []
-            targets = []
-
-            for k, v in context_map.items():
-                inputs.append(k)
-                targets.append(" <sep> ".join(v))
+                inputs.append(samples["context"][i])
+                targets.append(samples["question"][i])
         else:
             inputs = samples["context"]
             targets = samples["question"]
