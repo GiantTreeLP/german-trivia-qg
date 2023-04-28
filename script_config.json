@@ -1,9 +1,11 @@
 {
   "model_name_or_path": "valhalla/t5-base-e2e-qg",
   "dataset_name": "deepset/germanquad",
-  "max_source_length": 512,
-  "max_target_length": 32,
-  "num_beams": 4,
+  "max_source_length": 1024,
+  "max_target_length": 64,
+  "num_beams": 32,
+  "repetition_penalty": 1.25,
+  "length_penalty": 0.0,
   "optim": "adafactor",
   "e2e": false,
   "fp16": false,
@@ -17,10 +19,10 @@
   "do_predict": true,
   "learning_rate": 0.0001,
   "gradient_accumulation_steps": 8,
-  "num_train_epochs": 5,
+  "num_train_epochs": 75,
   "seed": 7,
   "logging_steps": 100,
-  "per_device_train_batch_size": 16,
+  "per_device_train_batch_size": 8,
   "per_device_eval_batch_size": 8,
   "predict_with_generate": true
 }
