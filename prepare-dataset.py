@@ -1,3 +1,5 @@
+from operator import itemgetter
+
 import pandas as pd
 
 from datasets import load_dataset
@@ -7,11 +9,12 @@ def main():
     dataset = load_dataset("deepset/germanquad")
     for sub_dataset in dataset:
         df = pd.DataFrame.from_dict(dataset[sub_dataset])
-        df.drop(columns=["id", "answers"], inplace=True)
+        df["label"] = "Kontext: " + df["context"] + "\nAntwort: " + df["answers"].map(itemgetter("text")).map(
+            itemgetter(0))
         df["question"].apply(str.strip)
-        df = df.groupby("context").aggregate({"question": " <sep> ".join})
-        df.reset_index(inplace=True)
-        df.to_csv(f"./datasets/germanquad-e2e-prepared/{sub_dataset}.csv", index=False)
+        df.drop(columns=["context", "answers", "id"], inplace=True)
+        df = df.filter(["label", "question"])
+        df.to_csv(f"./datasets/germanquad-jeopardy-prepared/{sub_dataset}.csv", index=False)
 
 
 if __name__ == "__main__":
