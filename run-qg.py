@@ -223,6 +223,23 @@ class DataTrainingArguments:
                     "which is used during ``evaluate`` and ``predict``."
         },
     )
+    repetition_penalty: float = field(
+        default=1.0,
+        metadata={
+            "help": "The parameter for repetition penalty. 1.0 means no penalty. See "
+                    "https://arxiv.org/abs/1909.05858 for more details."
+        },
+    )
+    length_penalty: float = field(
+        default=1.0,
+        metadata={
+            "help": "Exponential penalty to the length that is used with beam-based generation. "
+                    "It is applied as an exponent to the sequence length, "
+                    "which in turn is used to divide the score of the sequence. "
+                    "Since the score is the log likelihood of the sequence (i.e. negative), length_penalty > 0.0 "
+                    "promotes longer sequences, while length_penalty < 0.0 encourages shorter sequences."
+        },
+    )
     ignore_pad_token_for_loss: bool = field(
         default=True,
         metadata={
@@ -362,6 +379,10 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        num_beams=data_args.num_beams,
+        max_length=data_args.max_target_length,
+        repetition_penalty=data_args.repetition_penalty,
+        length_penalty=data_args.length_penalty,
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name
@@ -372,7 +393,7 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    tokenizer.add_tokens(["<hl>"])
+
     model = AutoModelForSeq2SeqLM.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -462,10 +483,10 @@ def main():
 
         if not data_args.e2e:
             for i in range(len(samples["id"])):
-                inputs.append(samples["context"][i])
+                inputs.append("Kontext: " + samples["context"][i] + "\nAntwort: " + samples["answers"][i]["text"][0])
                 targets.append(samples["question"][i])
         else:
-            inputs = samples["context"]
+            inputs = samples["label"]
             targets = samples["question"]
 
         inputs = [prefix + _input for _input in inputs]
@@ -635,22 +656,10 @@ def main():
 
     # Evaluation
     results = {}
-    max_length = (
-        training_args.generation_max_length
-        if training_args.generation_max_length is not None
-        else data_args.val_max_target_length
-    )
-    num_beams = (
-        data_args.num_beams
-        if data_args.num_beams is not None
-        else training_args.generation_num_beams
-    )
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        metrics = trainer.evaluate(
-            max_length=max_length, num_beams=num_beams, metric_key_prefix="eval"
-        )
+        metrics = trainer.evaluate(metric_key_prefix="eval")
         max_eval_samples = (
             data_args.max_eval_samples
             if data_args.max_eval_samples is not None
@@ -666,9 +675,7 @@ def main():
 
         predict_results = trainer.predict(
             predict_dataset,
-            metric_key_prefix="predict",
-            max_length=max_length,
-            num_beams=num_beams,
+            metric_key_prefix="predict"
         )
         predictions = [
             tokenizer.decode(ids, skip_special_tokens=True)
